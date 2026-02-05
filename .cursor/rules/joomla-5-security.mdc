@@ -1,0 +1,303 @@
+---
+description: Essential security guidelines for Joomla 5 development covering input validation, output escaping, authentication, authorization, and protection against common vulnerabilities.
+globs: *.php,*.xml,*.js
+alwaysApply: true
+---
+# Joomla 5 Security Best Practices Cursor Rules
+
+## Input Validation & Sanitization
+
+- **Never trust user input** - validate and sanitize everything
+- Use Joomla's input filtering: `$this->input->get('var', 'default', 'FILTER_TYPE')`
+- Common filter types:
+  - `STRING` - basic string filtering
+  - `INT` - integer values only
+  - `FLOAT` - floating point numbers
+  - `ALNUM` - alphanumeric characters only
+  - `EMAIL` - valid email format
+  - `URL` - valid URL format
+- Never use raw `$_POST`, `$_GET`, `$_REQUEST`, `$_SERVER`, `$_COOKIE`
+- Example secure input handling:
+```php
+$id = $this->input->getInt('id', 0);
+$title = $this->input->getString('title', '');
+$email = $this->input->get('email', '', 'EMAIL');
+```
+
+## Output Escaping
+
+- **Always escape output** before displaying user data
+- Use `htmlspecialchars()` or `$this->escape()` for HTML content
+- Use `Text::script()` for JavaScript string data
+- Use `addslashes()` for JavaScript string literals (rarely needed)
+- Examples:
+```php
+echo htmlspecialchars($userInput);
+echo $this->escape($data);
+echo Text::script($textForJS);
+```
+
+## Database Security
+
+- Use Joomla's Query Builder for all database operations
+- Always use parameter binding with `bind()` method
+- Quote table/column names with `quoteName()`
+- Quote values with `quote()` (but prefer binding)
+- Never concatenate user input directly into SQL
+- Example secure query:
+```php
+$db = Factory::getDbo();
+$query = $db->getQuery(true)
+    ->select($db->quoteName(['id', 'title']))
+    ->from($db->quoteName('#__content'))
+    ->where($db->quoteName('catid') . ' = :catid')
+    ->bind(':catid', $categoryId, ParameterType::INTEGER);
+$db->setQuery($query);
+```
+
+## CSRF Protection
+
+- Include CSRF tokens in all forms
+- Use `HTMLHelper::_('form.token')` to generate tokens
+- Validate tokens with `Session::checkToken()` in controllers
+- Example form token:
+```php
+// In form
+echo HTMLHelper::_('form.token');
+
+// In controller
+if (!Session::checkToken()) {
+    throw new \RuntimeException(Text::_('JINVALID_TOKEN'), 403);
+}
+```
+
+## Authentication & Authorization
+
+- Use `Factory::getApplication()->getIdentity()` to get current user
+- Check permissions with `$user->authorise('action', 'component')`
+- Implement proper ACL with `access.xml`
+- Never rely on frontend validation alone
+- Example permission check:
+```php
+$user = Factory::getApplication()->getIdentity();
+if (!$user->authorise('core.edit', 'com_mycomponent.item.' . $id)) {
+    throw new \Exception(Text::_('JERROR_ALERTNOAUTHOR'), 403);
+}
+```
+
+## Session Security
+
+- Use secure session configuration
+- Regenerate session IDs after login/privilege changes
+- Set appropriate session timeouts
+- Use secure cookies (HTTPS only)
+- Example session handling:
+```php
+$session = Factory::getApplication()->getSession();
+$session->set('user_data', $cleanData);
+```
+
+## File Upload Security
+
+- Validate file types, sizes, and extensions
+- Use `MediaHelper::canUpload()` for validation
+- Rename uploaded files to prevent execution
+- Store uploads outside web root when possible
+- Scan for malicious content
+- Example secure upload:
+```php
+if (!MediaHelper::canUpload($file)) {
+    throw new \RuntimeException('File type not allowed', 400);
+}
+
+$safeName = uniqid() . '.jpg'; // Force safe extension
+$uploadPath = JPATH_ROOT . '/media/secure/' . $safeName;
+```
+
+## XSS Prevention
+
+- Escape all user-generated content
+- Use Content Security Policy (CSP) headers
+- Validate and sanitize rich text content
+- Be careful with `innerHTML` and dynamic content
+- Example XSS prevention:
+```php
+// Bad - vulnerable to XSS
+echo $userComment;
+
+// Good - escaped output
+echo htmlspecialchars($userComment, ENT_QUOTES, 'UTF-8');
+```
+
+## SQL Injection Prevention
+
+- Never concatenate user input into SQL strings
+- Always use parameterized queries
+- Use appropriate data types for parameters
+- Validate data before database operations
+- Example SQL injection prevention:
+```php
+// Bad - SQL injection vulnerability
+$query = "SELECT * FROM #__users WHERE id = " . $userId;
+
+// Good - parameterized query
+$query = $db->getQuery(true)
+    ->select('*')
+    ->from($db->quoteName('#__users'))
+    ->where($db->quoteName('id') . ' = :id')
+    ->bind(':id', $userId, ParameterType::INTEGER);
+```
+
+## Password Security
+
+- Use Joomla's password hashing: `UserHelper::hashPassword()`
+- Verify passwords with `UserHelper::verifyPassword()`
+- Enforce strong password policies
+- Implement account lockout mechanisms
+- Never store passwords in plain text
+- Example password handling:
+```php
+$hashedPassword = UserHelper::hashPassword($plainPassword);
+$isValid = UserHelper::verifyPassword($plainPassword, $hashedPassword);
+```
+
+## Error Handling & Information Disclosure
+
+- Don't expose sensitive information in error messages
+- Log errors securely without revealing system details
+- Use generic error messages for users
+- Disable detailed error reporting in production
+- Example secure error handling:
+```php
+try {
+    // Risky operation
+} catch (Exception $e) {
+    // Log detailed error
+    Log::add($e->getMessage(), Log::ERROR, 'mycomponent');
+    
+    // Show generic message to user
+    throw new \RuntimeException('Operation failed', 500);
+}
+```
+
+## Headers & Security Configuration
+
+- Set security headers:
+  - `X-Frame-Options`
+  - `X-Content-Type-Options`
+  - `X-XSS-Protection`
+  - `Content-Security-Policy`
+- Use HTTPS for all authentication and sensitive operations
+- Implement proper CORS policies for APIs
+
+## Component-Specific Security
+
+- Validate component parameters and menu item access
+- Check user permissions for each view and action
+- Sanitize all URL parameters
+- Implement proper routing security
+- Example component security:
+```php
+// In component entry point
+$user = Factory::getApplication()->getIdentity();
+if (!$user->authorise('core.view', 'com_mycomponent')) {
+    throw new \Exception(Text::_('JERROR_ALERTNOAUTHOR'), 403);
+}
+```
+
+## Plugin Security
+
+- Validate plugin parameters from configuration
+- Check event context before processing
+- Don't execute arbitrary code from parameters
+- Sanitize all plugin output
+- Example plugin security:
+```php
+public function onContentPrepare($context, &$article, &$params, $page = 0)
+{
+    // Validate context
+    if ($context !== 'com_content.article') {
+        return;
+    }
+    
+    // Sanitize output
+    $article->text = htmlspecialchars($article->text);
+}
+```
+
+## Module Security
+
+- Validate module parameters
+- Escape all module output
+- Check user permissions for sensitive modules
+- Don't expose administrative functions in site modules
+- Example module security:
+```php
+// In module helper
+$limit = (int) $params->get('limit', 5);
+$category = (int) $params->get('catid', 0);
+
+// Always escape output in template
+echo htmlspecialchars($item->title);
+```
+
+## API Security
+
+- Implement proper authentication (API tokens, JWT)
+- Validate all API inputs
+- Use appropriate HTTP status codes
+- Implement rate limiting
+- Log API access and errors
+- Example API security:
+```php
+// API authentication
+$user = Factory::getApplication()->getIdentity();
+if (!$user->authorise('core.api', 'com_mycomponent')) {
+    throw new \Exception('Access denied', 403);
+}
+
+// Input validation
+$data = $this->input->getArray([
+    'title' => 'STRING',
+    'content' => 'RAW'
+]);
+```
+
+## Configuration Security
+
+- Don't store sensitive data in component parameters
+- Use Joomla's credential storage for API keys
+- Encrypt sensitive configuration data
+- Validate configuration values
+- Don't expose debug information in production
+
+## Regular Security Practices
+
+- Keep Joomla core and extensions updated
+- Regularly audit code for vulnerabilities
+- Use automated security scanning tools
+- Implement proper backup and recovery procedures
+- Monitor logs for suspicious activity
+- Follow principle of least privilege
+- Regularly review and update permissions
+
+## Common Vulnerabilities to Avoid
+
+- **SQL Injection**: Use parameterized queries
+- **XSS**: Escape all output
+- **CSRF**: Use tokens in forms
+- **Path Traversal**: Validate file paths
+- **File Inclusion**: Don't include user-controlled files
+- **Command Injection**: Don't execute user input
+- **XXE**: Disable external entities in XML parsing
+- **Insecure Direct Object References**: Check permissions
+
+## Security Testing
+
+- Test with security scanning tools
+- Perform manual penetration testing
+- Review code for security issues
+- Test input validation thoroughly
+- Verify permission checks work correctly
+- Test error handling and information disclosure
+- Validate authentication and session management

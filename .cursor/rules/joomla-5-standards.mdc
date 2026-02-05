@@ -1,0 +1,148 @@
+---
+description: Comprehensive Joomla 5 development standards covering PSR-12, security best practices, coding conventions, and integration guidelines for professional Joomla development.
+globs: *.php,*.xml,*.ini,*.js,*.css
+alwaysApply: true
+---
+# Joomla 5 Development – Standard Rules Followed by Best Developers
+
+---
+
+## GENERAL CODING STANDARDS
+
+- Follow **PSR-12** and **Joomla Coding Standards**
+- Use **namespaces** in all files (no legacy class prefixes)
+- No closing `?>` tags in PHP files
+- Always use **4 spaces for indentation** (no tabs)
+- Use `camelCase` for variables/methods, `PascalCase` for classes
+- Avoid procedural code; use **OOP principles**
+- Split logic into **Services**, **Helpers**, **Models**, and **Controllers**
+- Follow **DRY** (Don't Repeat Yourself) and **SRP** (Single Responsibility Principle)
+
+---
+
+## PROJECT STRUCTURE
+
+**✅ CRITICAL: Correct Joomla 5 Folder Structure**
+
+- **`src/` folder goes at COMPONENT ROOT level, NOT inside admin/ or site/ folders!**
+- Always include: `access.xml`, `config.xml`, `manifest.xml`
+- Component structure:
+```
+com_mycomponent/
+├── admin/                      # Administrator interface files
+├── site/                       # Site interface files  
+├── api/                        # API interface files (optional)
+├── src/                        # ← ROOT LEVEL SOURCE CODE
+│   ├── Administrator/          # Admin namespace classes
+│   ├── Site/                   # Site namespace classes
+│   └── Api/                    # API namespace classes
+├── media/                      # Assets (CSS, JS, images)
+└── mycomponent.xml             # Component manifest
+```
+- Use consistent namespacing: `Joomla\Component\<ComponentName>\<ClientType>\...`
+- Manifest namespace: `<namespace path="src">Joomla\Component\Yourcomponent</namespace>`
+
+---
+
+## SECURITY BEST PRACTICES
+
+- **Always escape output** using `$this->escape()` or `htmlspecialchars()`
+- **Validate all input** using:
+  - `$this->input->get('var', '', 'STRING')`
+  - `FilterInput::getInstance()`
+- **Never use raw `$_POST`, `$_GET`, `$_REQUEST`**
+- Use `Session::checkToken()` for CSRF validation
+- Sanitize database input via:
+  - `quote()`, `quoteName()`, `bind()`
+- Avoid inline SQL — use Joomla's QueryBuilder or ORM where applicable
+
+---
+
+## COMPONENT DEVELOPMENT RULES
+
+- Use **Joomla MVC**: extend `FormModel`, `ListModel`, `HtmlView`, etc.
+- Use `Joomla\CMS\MVC\Factory\MVCFactory` to load models/controllers/views
+- Use **language files** for all user-facing text
+  - Format: `language/en-GB/en-GB.com_<component>.ini`
+- Implement routing via `router.php`
+- Support **template overrides** via layout files and `LayoutHelper::render()`
+
+---
+
+## PLUGIN DEVELOPMENT RULES
+
+- Extend `CMSPlugin`
+- Namespace: `Joomla\Plugin\<group>\<element>`
+- Support config UI via `<config>` section in XML
+- Dispatch and listen for Joomla events only when needed
+- Separate logic into helpers if plugin becomes large
+
+---
+
+## INTEGRATION STANDARDS
+
+Use the following Joomla core APIs as much as possible:
+
+| Purpose         | Use Joomla API                      |
+|----------------|--------------------------------------|
+| Database        | `$db = Factory::getDbo()`            |
+| Routing         | `Route::_()`, `Uri::getInstance()`   |
+| User Handling   | `$user = Factory::getApplication()->getIdentity()` |
+| ACL             | `authorise()`, `getAuthorisedViewLevels()` |
+| Media Upload    | `MediaHelper::canUpload()`           |
+| Logging         | `Factory::getApplication()->getLogger()->info()` |
+
+---
+
+## TESTABILITY & DEBUGGING
+
+- Avoid `var_dump()` or `echo` in logic
+- Use `Joomla\CMS\Log\Log` or custom logger for debugging
+- Break down logic into testable units (avoid logic inside views)
+- Add dev-only debug logs via Joomla Debug plugin
+
+---
+
+## MANIFEST XML RULES
+
+- Include all required sections:
+  - `<version>`, `<files>`, `<languages>`, `<media>`, `<sql>`, `<updateservers>`
+- Use `<namespace path="src/">Joomla\Component\YourComponent</namespace>` for modern loading
+- Provide `<menu>`, `<config>`, and `<submenus>` for backend integration
+- Define update servers for future OTA updates
+
+---
+
+## DESIGN PRINCIPLES
+
+- Component logic should be **isolated and extensible**
+- Prefer **dependency injection** over static access where possible
+- Use **Services** and **Helpers** to organize complex logic
+- Avoid business logic in controllers or views — keep them thin
+
+---
+
+## FILE/FOLDER NAMING CONVENTIONS
+
+- Lowercase with underscores for files: `default.php`, `form.xml`
+- PascalCase for class files: `BookModel.php`, `BooksController.php`
+- Match class name with file name
+- Use Joomla folder hierarchy:  
+  `models`, `views`, `controllers`, `tables`, `forms`, `services`, `helpers`
+
+---
+
+## LANGUAGE & CONFIG
+
+- All user-facing strings must go in language files
+- Use Joomla form field types in `form.xml`: `text`, `list`, `editor`, `media`, `calendar`, etc.
+- Organize config with fieldsets and grouping
+
+---
+
+## MISC
+
+- Don't modify Joomla core files
+- Prefer **Joomla native solutions** over third-party libraries unless necessary
+- Support Joomla's **accessibility and multilingual features**
+- Use **categories**, **tags**, and **menus** via core components where possible

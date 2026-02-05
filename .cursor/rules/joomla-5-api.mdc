@@ -1,0 +1,225 @@
+---
+description: Comprehensive guide for building Joomla 5 Web Services APIs including component API endpoints, authentication, serialization, and RESTful practices.
+globs: *.php,api/**/*,components/**/api/**/*
+alwaysApply: false
+---
+# Joomla 5 API Development Cursor Rules
+
+## API Structure & Setup
+
+- API controllers are placed in `api/src/Controller/`
+- Use namespace: `Joomla\Component\<ComponentName>\Api\Controller\`
+- Extend `ApiController` or specialized controllers like `FormController`
+- API views go in `api/src/View/` (usually JSON views)
+- Serializers go in `api/src/Serializer/`
+
+## API Controller Structure
+
+- Controllers handle HTTP verbs: GET, POST, PUT, DELETE
+- Use appropriate base classes:
+  - `ApiController` for basic CRUD
+  - `FormController` for form-based operations
+  - `DisplayController` for read-only data
+- Example controller:
+```php
+namespace Joomla\Component\Mycomponent\Api\Controller;
+
+use Joomla\CMS\MVC\Controller\ApiController;
+
+class ItemsController extends ApiController
+{
+    protected $contentType = 'items';
+    protected $default_view = 'items';
+
+    public function displayList()
+    {
+        // GET /api/index.php/v1/mycomponent/items
+        return parent::displayList();
+    }
+}
+```
+
+## HTTP Method Mapping
+
+- **GET** `/items` → `displayList()` (list all items)
+- **GET** `/items/{id}` → `displayItem()` (get single item)
+- **POST** `/items` → `add()` (create new item)
+- **PUT** `/items/{id}` → `edit()` (update existing item)
+- **DELETE** `/items/{id}` → `delete()` (remove item)
+- **PATCH** `/items/{id}` → `edit()` (partial update)
+
+## Authentication
+
+- Joomla 5 supports multiple API authentication methods
+- **API Token**: Use in header `X-Joomla-Token: your-token`
+- **Basic Auth**: Username/password authentication
+- **Bearer Token**: JWT tokens for stateless authentication
+
+### API Token Setup
+```php
+// In component's plugin or controller
+$user = Factory::getApplication()->getIdentity();
+if (!$user->authorise('core.api', 'com_mycomponent')) {
+    throw new \Exception('Access denied', 403);
+}
+```
+
+## Serializers
+
+- Create custom serializers in `api/src/Serializer/`
+- Extend `Joomla\CMS\Serializer\JsonApiSerializer`
+- Control what data is exposed in API responses
+- Example serializer:
+```php
+namespace Joomla\Component\Mycomponent\Api\Serializer;
+
+use Joomla\CMS\Serializer\JsonApiSerializer;
+
+class ItemSerializer extends JsonApiSerializer
+{
+    public function __construct()
+    {
+        parent::__construct('items');
+    }
+
+    protected function getFields(): array
+    {
+        return [
+            'id', 'title', 'description', 'created', 'modified'
+        ];
+    }
+}
+```
+
+## API Views
+
+- Create JSON views in `api/src/View/`
+- Extend `Joomla\CMS\MVC\View\JsonApiView`
+- Handle data formatting and response structure
+- Example view:
+```php
+namespace Joomla\Component\Mycomponent\Api\View\Items;
+
+use Joomla\CMS\MVC\View\JsonApiView;
+
+class JsonApiView extends JsonApiView
+{
+    protected $fieldsToRenderItem = [
+        'id', 'title', 'description', 'catid', 'state'
+    ];
+
+    protected $fieldsToRenderList = [
+        'id', 'title', 'catid', 'state', 'created'
+    ];
+}
+```
+
+## Router Configuration
+
+- Define API routes in component's `router.php`
+- Support RESTful URL patterns
+- Handle route parameters and constraints
+- Example router:
+```php
+use Joomla\CMS\Component\Router\RouterView;
+
+class MycomponentRouter extends RouterView
+{
+    public function __construct($app = null, $menu = null)
+    {
+        $this->registerView(new RouterViewConfiguration('items'));
+        $this->registerView(new RouterViewConfiguration('item'));
+        parent::__construct($app, $menu);
+    }
+}
+```
+
+## Request Handling
+
+- Access request data via `$this->input`
+- Support query parameters for filtering, sorting, pagination
+- Validate input data before processing
+- Handle different content types (JSON, form data)
+- Example:
+```php
+public function displayList()
+{
+    $limit = $this->input->getInt('limit', 20);
+    $offset = $this->input->getInt('offset', 0);
+    $search = $this->input->getString('search', '');
+    
+    $model = $this->getModel('Items');
+    $model->setState('list.limit', $limit);
+    $model->setState('list.start', $offset);
+    $model->setState('filter.search', $search);
+    
+    return parent::displayList();
+}
+```
+
+## Response Formatting
+
+- Follow JSON:API specification for consistency
+- Include metadata (pagination, total count)
+- Proper HTTP status codes:
+  - 200: Success
+  - 201: Created
+  - 400: Bad Request
+  - 401: Unauthorized
+  - 403: Forbidden
+  - 404: Not Found
+  - 500: Internal Server Error
+
+## Error Handling
+
+- Implement consistent error responses
+- Include error codes and descriptive messages
+- Log errors appropriately for debugging
+- Example error response:
+```php
+throw new \RuntimeException('Item not found', 404);
+```
+
+
+## API Documentation
+
+- Document all endpoints with expected parameters
+- Provide example requests and responses
+- Include authentication requirements
+- Document error codes and responses
+- Use tools like Swagger/OpenAPI for formal documentation
+
+## Testing
+
+- Create automated tests for API endpoints
+- Test different HTTP methods and status codes
+- Test authentication and authorization
+- Test error conditions and edge cases
+- Use tools like Postman or cURL for manual testing
+
+## Versioning
+
+- Support API versioning in URLs (`/v1/`, `/v2/`)
+- Maintain backward compatibility when possible
+- Deprecate old versions gracefully
+- Document version differences clearly
+
+## Performance Optimization
+
+- Implement efficient database queries
+- Use appropriate caching strategies
+- Minimize payload size in responses
+- Support pagination for large datasets
+- Consider compression for responses
+- Monitor API performance and usage
+
+## Best Practices
+
+- Follow RESTful principles consistently
+- Use appropriate HTTP verbs and status codes
+- Implement proper error handling and logging
+- Support filtering, sorting, and pagination
+- Use consistent naming conventions
+- Validate all input and escape all output
+- Document APIs thoroughly
+- Test thoroughly across different scenarios

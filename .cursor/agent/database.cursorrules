@@ -1,0 +1,74 @@
+---
+description: Authoritative guidelines and best practices for database schema design, migration policies, and data integrity specific to the com_tjNotification Joomla component.
+globs: *.sql,*.md
+alwaysApply: true
+---
+# com_tjNotification Database Schema Rules and Best Practices
+
+## General Guidelines
+- All tables use InnoDB engine with utf8mb4 charset and utf8mb4_unicode_ci collation for Unicode support and transactional integrity.
+- All primary keys are properly defined, with auto-increment on numerical keys where applicable.
+- Foreign key constraints are used to maintain data integrity between related tables.
+
+## Tables Overview
+#__tj_notification_providers
+- Holds notification providers.
+- provider is the primary key (string-based).
+- state indicates active/inactive status (0 = inactive, 1 = active).
+- Use this table to validate provider existence when referencing providers in related tables.
+
+#__tj_notification_templates
+- Stores templates for notifications.
+- id is the primary key, auto-increment integer.
+- Uniqueness enforced on (client, key) combination.
+- state indicates if the template is published or inactive.
+- user_control and core flags indicate template usage context.
+- replacement_tags stores template placeholder tags.
+
+#__tj_notification_template_configs
+- Holds configuration per template per backend/language.
+- template_id foreign key referencing #__tj_notification_templates(id) ensures config relates to existing template.
+- Includes subject, body, and optional webhook_url.
+- use_global_webhook_url flag to toggle global webhook usage.
+- Track creation and update timestamps.
+- state controls config activation.
+- is_override indicates if this config overrides defaults.
+
+#__tj_notification_user_exclusions
+- Maintains user-level exclusions for notifications per client, key, and provider.
+- Foreign key constraint on provider to #__tj_notification_providers(provider).
+- Indexed for efficient lookups on client, provider, key.
+- Use this table to filter out notifications for excluded users.
+
+#__tj_notification_logs
+- Log table for all sent notifications with full metadata and content.
+- Auto-increment primary key id.
+- Includes fields for recipients (to, cc, bcc) and email content.
+- Tracks send date and state for delivery status.
+- Supports priority and categorization.
+- Ensure logs are archived or purged per retention policies to avoid bloat.
+
+#__tjnotifications_subscriptions
+- Stores device and subscription info per user for push notifications or other backends.
+- Unique primary key id (auto-increment).
+- Includes platform, address, device ID, and state flags (is_confirmed, state).
+- Tracks creation and modification metadata (created_on, updated_on, created_by, modified_by).
+- Indexed by user_id for quick subscription lookup.
+
+Naming & Conventions
+- Table prefixes are to be used (#__tj_), ensuring Joomla DB prefix abstraction.
+- Column names are descriptive and consistent in data types.
+- Use varchar length based on expected content size.
+- Timestamps use datetime with nullable defaults where applicable.
+
+Referential Integrity & Indexing
+- All foreign keys are explicitly declared with meaningful constraints.
+- Indexes on frequently searched columns (e.g., client, key, user_id, provider) for performance optimization.
+- Unique keys enforce data consistency, e.g., (client, key) in notification templates.
+
+Migration & Updates
+- Any schema changes should be performed via migration files with up and down scripts in /migrations.
+- Provide clear rollback plans and maintain data integrity during migrations.
+- Security & Best Practices
+- Avoid storing sensitive data in plain text in any table. Use encryption if needed outside of this scope.
+- Prefer using Joomla database API for all DB interactions to maintain security and compatibility.

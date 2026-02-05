@@ -1,0 +1,77 @@
+---
+description: Comprehensive coding, security, and operational rules for AI-assisted development and maintenance of the com_tjNotification Joomla component.
+globs: *.php,*.js,*.md
+alwaysApply: true
+---
+# com_tjNotification Cursor Rules for AI-Assisted Development
+
+***
+1. Scope and Security
+- Apply rules strictly to the `com_tjNotification` component within the `.cursor/agent/` directory.
+- Do not modify other Joomla components, core files, or external directories unless explicitly instructed.
+- Use only approved external code or libraries after manual security and license review.
+- Follow secure coding standards including proper input validation, safe data handling, and protection of sensitive information.
+- Flag any code changes impacting security or critical logic for human review.
+- Avoid insecure patterns such as raw SQL queries or unsanitized inputs.
+
+2. Source of Truth
+- Reference files in the following order when troubleshooting:
+  1. Documentation files in `.cursor/agent/` (e.g., `database.md`, `workflow.md`, `config.md`, `common_issues.md`)
+  2. Component implementation files (`controllers`, `models`, `views`, `helpers`, `plugins`)
+  3. Database schema and migration files (`/sql`, `/migrations`)
+  4. Project metadata files (`README.md`, `CHANGELOG.md`) and test suites
+- Do not exceed knowledge of stable Joomla APIs outlined below.
+
+3. Joomla APIs and Coding Patterns
+- Use Joomla APIs exclusively:
+  - Database interaction via `Factory::getDbo()`, `$db->getQuery(true)`, `quote()`, `bind()`, and `execute()`.
+  - Input retrieval via `Factory::getApplication()->input->get*()` or `JInput`.
+  - Mail operations via `Factory::getMailer()`.
+  - Access Control List (ACL) using `Factory::getUser()` and authorization methods.
+  - Event handling through Joomla's dispatcher.
+- Avoid raw mysqli, PDO, or external database libraries.
+- Prefer existing component helper classes over creating new global utilities.
+
+4. External Dependency Control
+- Do not introduce new composer or npm packages without explicit approval.
+- Avoid unsanctioned code snippets from external sources unless reviewed and license-cleared.
+
+5. Database Migration Policy
+- Use dedicated SQL migration files with clear `up` and `down` methods for schema changes.
+- Provide exact `ALTER TABLE` statements and corresponding rollback procedures.
+- Apply migrations manually with documented approval steps for staging and production environments.
+
+6. Code Delivery and Testing
+- Deliver fixes as unified git diff patches with descriptive commit messages.
+- Include manual test checklists and unit test examples when applicable.
+- Provide detailed reproduction steps and verification criteria.
+
+7. Logging and Side Effects
+- For email or external requests, recommend testing in safe mode using staging SMTP or email log review.
+- Use Joomla’s logging mechanisms appropriately.
+- Avoid suggesting destructive operations without explicit confirmation and backup plans.
+
+8. Assistant Behavior
+- Upon issue input, summarize the problem, scan code, run an investigation checklist, propose root causes with confidence levels, and suggest fixes along with testing steps.
+- If confidence is below 60%, request specific runtime data before making assumptions.
+- Avoid hallucinating; report "Not found in repo" if entities are missing.
+
+9. Notification-Specific Procedures
+- For "notification not sent" issues, sequentially verify:
+  - Plugin published state.
+  - Notification template presence in the database.
+  - Joomla global mail configuration.
+  - Notification queue table.
+  - Background workers, cron jobs, and command inspections.
+- Use mocks or stubs for external API calls in testing.
+
+10. Fail-Safe and Autonomy
+- Autonomous mode must be disabled by default.
+- The assistant may only propose patches and must never auto-apply changes without explicit confirmation including rollback instructions.
+
+11. Documentation Reference
+- Prefer `.cursor/agent/` files as authoritative references.
+- Use relative paths from the component root for internal links.
+
+12. Escalation and Sensitivity
+- Escalate issues involving payments, personal data, or production database migrations to senior developers with documented sign-off.

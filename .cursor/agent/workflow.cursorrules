@@ -1,0 +1,63 @@
+---
+description: Detailed workflow definitions covering notification lifecycle, event handling, queue processing, error handling, and extensibility for the com_tjNotification Joomla component.
+globs: *.md
+alwaysApply: true
+---
+# com_tjNotification Notification Workflow Rules and Processes
+
+## Workflow Rules for com_tjNotification
+1. Notification Triggering
+- Notifications are triggered by specific events in the Joomla system or component, such as user registration, order placement, or custom business logic events.
+- Event listeners (plugins) capture these events and initiate notification workflows.
+- Each event maps to one or more notification templates and configured providers.
+
+2. Template Selection
+- When a notification is triggered, the system selects the appropriate notification template based on:
+- The event key matching the template key (#__tj_notification_templates.key)
+- Client context (client field)
+- Language and backend configurations (#__tj_notification_template_configs)
+- If multiple configurations exist, precedence rules apply: exact language match > wildcard (*) language > default fallback.
+
+3. Notification Queueing
+- Notifications are not sent immediately; they are enqueued in #__tjnotification_queue (or relevant queue table) for asynchronous processing.
+- Queue entries contain references to templates, target users/devices, and necessary parameters for message generation.
+- The system respects user exclusions and ACL permissions when enqueueing notifications (users in #__tj_notification_user_exclusions are excluded).
+
+4. Processing & Sending
+- A background worker or cron job periodically processes queued notifications:
+- Fetch pending notifications in queued state.
+- Use template configs to build message content (subject, body, placeholders replaced).
+- Select notification provider/plugin (#__tj_notification_providers) to send message.
+- Attempt sending via provider; success or failure is logged in #__tj_notification_logs.
+- Update the queue item state accordingly (sent, failed, retry).
+- Email sending uses Joomla mail APIs; other channels use their respective APIs or webhooks.
+
+5. Error Handling & Retries
+- Failed notification attempts trigger retry policies configurable in component settings.
+- Retries respect exponential backoff and maximum retry limits.
+- Persistent failures generate admin alerts or logged errors for manual review.
+
+6. User Preferences & Exclusions
+- Users can be excluded from specific notifications via #__tj_notification_user_exclusions.
+- Subscription management allows users to confirm or revoke subscriptions stored in #__tjnotifications_subscriptions.
+- User controls and preferences override default settings where applicable.
+
+7. Logging & Auditing
+- All notification processing steps are logged, including sending attempts, results, and errors.
+- Logs are maintained in #__tj_notification_logs with timestamps and contextual details.
+- Logs support audit, troubleshooting, and compliance needs.
+
+8. Configuration & Management
+- Admin interface allows configuration of templates, providers, queue processing intervals, and retry policies.
+- Global webhook URLs and provider-specific settings configured via template configs apply during sending.
+- Admin config changes trigger cache updates and config reloads.
+
+9. Extensibility & Plugins
+- Notification providers are implemented as plugins conforming to defined interfaces.
+- Custom providers can be added by implementing plugin contracts and registering in the providers table.
+- Events for extensibility and plugin hooks are dispatched during key workflow stages.
+
+10. Security & Validation
+- Input parameters for notifications are validated and sanitized during trigger and queueing.
+- Access control enforced at event trigger and user subscription layers.
+- Sensitive data is not exposed in notifications or logs.

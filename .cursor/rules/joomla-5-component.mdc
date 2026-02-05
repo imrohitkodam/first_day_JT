@@ -1,0 +1,132 @@
+---
+description: Comprehensive Joomla 5 component development guidelines covering MVC architecture, security, database interaction, routing, and ACL implementation.
+globs: *.php,*.xml,components/**/*
+alwaysApply: false
+---
+# Joomla 5 Component Development Cursor Rules
+
+##  Architecture & Structure
+
+- Always follow Joomla 5's MVC architecture (Model, View, Controller).
+- Separate concerns:
+  - **Models** handle business logic and data.
+  - **Views** handle presentation only.
+  - **Controllers** handle input processing and routing.
+- Generate components with **strict directory structure**:
+  - `admin/`, `site/`, and `api/` folders for interface files
+  - `src/` folder at component root for all PHP classes
+  - Inside `src/`: `Administrator/`, `Site/`, `Api/` subfolders
+  - Admin folder contains: `tmpl/`, `sql/`, `services/`, `forms/`, `language/`
+- Use `JPATH_COMPONENT_ADMINISTRATOR`, `JPATH_COMPONENT_SITE`, etc., for paths.
+
+---
+
+## Manifest File (`component_name.xml`)
+
+- Generate a valid manifest XML with:
+  - `<extension type="component" method="upgrade">`
+  - `<version>` tag must reflect release version
+  - Include `<sql>`, `<files>`, `<media>`, `<administration>`, `<updateservers>`, and `<languages>`
+  - Define PHP namespaces using `<namespace path="src/">Joomla\Component\Yourcomponentname</namespace>`
+
+---
+
+##  MVC Implementation
+
+- Use proper base classes from the `Joomla\CMS\MVC\Model` namespace, e.g., `ListModel`, `FormModel`, `ItemModel`.
+- Use `Joomla\CMS\MVC\MVCFactory` for instantiating controllers, models, views, and tables.
+- In views, data must be passed from models, not directly queried.
+- Use `$this->getDbo()` within models for database access. Avoid `static::getInstance()`. For dependency injection, use `Joomla\CMS\Factory::getContainer()`.
+
+---
+
+##  List View Enhancements
+
+- For all List Views, include:
+  - `Search Tools` form with filter fields using `JLayoutHelper::render('joomla.searchtools.default')`
+  - Filter by title, status, category, and date if applicable
+- Use `populateState()` in ListModel to handle filter values from `Joomla\CMS\Input\Input`
+- Implement toolbar with filtering buttons (New, Edit, Publish, Unpublish, Trash)
+- Use `getItems()` and `getPagination()` in View
+- Ensure `tmpl/default.php` loads the `$this->items`, `$this->pagination`, and renders the filters
+
+---
+
+##  Database Interaction
+
+- Use Joomla's query builder API.
+  - Quote table/column names using `quoteName()`
+  - Quote values using `quote()`
+- Use parameterized queries with `bind()` for security.
+- Do **not** use deprecated `JFactory::getDbo()`.
+- Place schema SQL in:
+  - `sql/install.mysql.utf8.sql`
+  - `sql/uninstall.mysql.utf8.sql`
+  - `sql/updates/mysql/` (versioned update files)
+- Always keep `install.mysql.utf8.sql` up-to-date.
+
+---
+
+##  Routing
+
+- Use `Router.php` to generate SEF URLs.
+- Define routing logic using Joomla Router's `parse()` and `build()` methods.
+- Always ensure URLs include `option=`, `view=`, `task=`, and `Itemid`.
+
+---
+
+## ACL & Permissions
+
+- Define `access.xml` with `core.admin`, `core.manage`, etc.
+- Include `permissions` fieldset in `config.xml`
+- Use a dedicated helper class to check permissions, e.g., `Joomla\Component\Yourcomponentname\Administrator\Helper\YourcomponentnameHelper::getActions()`.
+- Deny unauthorized access in admin entry with `!Joomla\CMS\Factory::getUser()->authorise()`
+
+---
+
+## Security Rules
+
+- Validate and sanitize all user input.
+- Escape output using `$this->escape()` or `htmlspecialchars()`.
+- Always include CSRF token in forms with `Joomla\CMS\HTML\HTMLHelper::_('form.token')`
+- Use `$this->checkToken()` in controllers
+- Secure file uploads:
+  - Check size, MIME type, and extension
+  - Use `Joomla\CMS\Helper\MediaHelper::canUpload()`
+  - Rename files and store in secure locations
+
+---
+
+## Coding Standards (PSR-12)
+
+- Indentation: 4 spaces (no tabs)
+- Line length: 120 soft limit
+- Class names: PascalCase
+- Function/methods: camelCase
+- Constants: UPPER_SNAKE_CASE
+- Omit closing PHP tag (`?>`)
+- Use lowercase for PHP keywords (`if`, `else`, `null`, `true`)
+
+---
+
+## Documentation & Naming
+
+- Include PHPDoc blocks for all methods, parameters, and return types.
+- Describe purpose and usage clearly.
+- Use a consistent namespace structure, such as `Joomla\Component\Mycomponent\Admin\Model\ItemModel`.
+
+---
+
+## Modularity
+
+- Treat each feature (CRUD, form, view) as its own reusable block.
+- Promote generation of independent MVC parts over monolithic logic.
+- Use **traits** and **helper classes** to encapsulate and reuse shared logic.
+
+---
+
+## General Best Practices
+
+- Avoid deprecated classes: `JRequest`, `JFactory::getDbo()`, etc.
+- Ensure all forms and controllers are CSRF-protected.
+- Support Joomla 5 update system via `<updateservers>` in manifest.

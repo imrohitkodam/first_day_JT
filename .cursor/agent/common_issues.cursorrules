@@ -1,0 +1,3 @@
+## Template Save Errors
+- Saving existing notification templates may fail due to permission issues, input validation errors, database constraint conflicts (e.g., unique keys), or schema mismatches.
+- Verify proper user permissions, validate inputs, check logs, and ensure database integrity.

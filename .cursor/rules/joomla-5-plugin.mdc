@@ -1,0 +1,99 @@
+---
+description: Comprehensive guidelines for developing modern, secure, and compliant Joomla 5 plugins covering file structure, manifest conventions, dependency injection, security, and coding standards.
+globs: *.php,*.xml,plugins/**/*
+alwaysApply: false
+---
+# Joomla 5 Plugin Development Cursor Rules
+
+## Plugin Structure & Basics
+
+- All plugins must be structured under `plugins/group/element/`
+- Main plugin class should follow the naming convention:  
+  `Plg<PluginGroup><PluginName>`
+- The main plugin class should extend `CMSPlugin`
+- Use the namespace:  
+  `Joomla\Plugin\<group>\<element>`
+
+## Manifest File (element.xml)
+
+- Always include the `<extension>` tag with `type="plugin"`
+- Define `<group>`, `<files>`, `<languages>`, `<events>`, and `<config>`
+- Use `<namespace>` tag to define PHP namespace
+- For configuration, use `<config>` and define fields inside `<fields>` → `<fieldset>`
+
+## Plugin Lifecycle
+
+- Use `onExtensionBeforeSave`, `onContentPrepare`, `onUserAfterLogin`, or appropriate hooks
+- Plugin method names must exactly match the Joomla event names
+- Only implement the methods relevant to your plugin
+- Do not override base CMSPlugin methods unless necessary
+
+## Dependency Injection (DI)
+
+- Use Joomla's DI container (`Factory::getContainer()`) instead of old static methods
+- Prefer `$this->app` and `$this->input` for accessing application and request data
+- Inject services like `DatabaseInterface`, `DispatcherInterface` via constructor if needed
+
+## Folder Structure
+
+- `plugin.php` (main class)
+- `services/provider.php` (optional service provider)
+- `tmpl/` for layout overrides or reusable HTML
+- `language/en-GB/en-GB.plg_<group>_<element>.ini` for language strings
+
+## Language Support
+
+- Use `Text::_('PLG_GROUP_ELEMENT_KEY')` for language strings
+- Declare all strings in `.ini` files under the `language/` directory
+- Always localize UI strings, error messages, labels, and config field labels
+
+## Testing & Debugging
+
+- Log plugin execution using `Factory::getApplication()->getLogger()->debug()`
+- Use Joomla Debug plugin to trace events
+- Use `echo` or `dump()` only for early development
+
+
+## Common Plugin Types
+
+### System Plugins
+- **Purpose**: Core system operations, event handling, global functionality
+- **Events**: `onAfterInitialise`, `onBeforeRender`, `onAfterRender`
+- **Folder**: `plugins/system/myplugin/`
+
+### Content Plugins  
+- **Purpose**: Content processing, text manipulation, content injection
+- **Events**: `onContentPrepare`, `onContentAfterDisplay`, `onContentBeforeDisplay`
+- **Folder**: `plugins/content/myplugin/`
+
+### Authentication Plugins
+- **Purpose**: User authentication methods (LDAP, SSO, etc.)
+- **Events**: `onUserAuthenticate`, `onUserLogin`, `onUserLogout`
+- **Folder**: `plugins/authentication/myplugin/`
+
+## Configuration Fields
+
+- Add fields in manifest using `<config>`
+- Use XML field types: `text`, `textarea`, `list`, `radio`, `editor`, `sql`
+- Retrieve config values using `$this->params->get('field_name')`
+
+## Event Priority (Advanced)
+
+- For plugins needing event execution order, use:
+  - `<ordering>` tag in XML
+  - or manipulate the plugin ordering in the admin UI
+
+## Coding Standards
+
+- Follow PSR-12
+- Use camelCase for methods and variables
+- Use PascalCase for classes
+- Avoid procedural code — stick to OOP
+- Omit PHP closing tag (`?>`)
+
+## Best Practices
+
+- Keep plugin logic focused and modular
+- Offload reusable logic to helper classes when needed
+- Avoid direct DB queries unless absolutely required; use Joomla's Query API
+- Avoid hardcoding strings, paths, or group/element names

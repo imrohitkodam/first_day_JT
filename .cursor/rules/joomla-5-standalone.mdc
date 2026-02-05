@@ -1,0 +1,185 @@
+# Joomla 5 Standalone Extension Development
+
+## Overview
+
+Develop Joomla 5 extensions independently without requiring a full Joomla installation. This approach enables focused development, better version control, and easier distribution.
+
+## Component Project Structure
+
+```
+my-component/
+├── admin/                      # Administrator interface files
+│   ├── forms/                  # Form XML files  
+│   ├── language/               # Admin language files
+│   ├── sql/                    # Database files
+│   ├── tmpl/                   # Admin template files
+│   └── services/               # Service providers
+├── site/                       # Site interface files
+│   ├── language/               # Site language files
+│   └── tmpl/                   # Site template files  
+├── api/                        # API interface files (optional)
+├── src/                        # ✅ ROOT LEVEL SOURCE CODE
+│   ├── Administrator/          # Admin namespace classes
+│   │   ├── Controller/
+│   │   ├── Model/
+│   │   ├── View/
+│   │   └── Helper/
+│   ├── Site/                   # Site namespace classes
+│   │   ├── Controller/
+│   │   ├── Model/
+│   │   └── View/
+│   └── Api/                    # API namespace classes (optional)
+│       ├── Controller/
+│       └── View/
+├── media/                      # Assets (CSS, JS, images)
+├── language/                   # Root language files
+├── mycomponent.xml             # Component manifest
+├── access.xml                  # ACL definitions
+├── config.xml                  # Component configuration
+└── build.sh                   # Build script for packaging
+```
+
+## Quick Start
+
+### 1. Create Project
+```bash
+mkdir my-component && cd my-component
+```
+
+### 2. Essential Guidelines
+- **Namespace**: `Joomla\Component\YourComponent\Administrator\...`
+- **Classes**: Put all PHP classes in `src/Administrator/`, `src/Site/`, `src/Api/`
+- **Interface files**: Put templates, forms, SQL in `admin/`, `site/`, `api/` folders
+- **Manifest**: Use `<namespace path="src">Joomla\Component\Yourcomponent</namespace>`
+
+## Example Classes
+
+### Administrator Controller
+```php
+<?php
+namespace Joomla\Component\Mycomponent\Administrator\Controller;
+
+use Joomla\CMS\MVC\Controller\BaseController;
+
+class DisplayController extends BaseController
+{
+    // Controller implementation
+}
+```
+
+### Site Model  
+```php
+<?php
+namespace Joomla\Component\Mycomponent\Site\Model;
+
+use Joomla\CMS\MVC\Model\ItemModel;
+
+class ItemModel extends ItemModel
+{
+    // Model implementation
+}
+```
+
+## Basic Manifest (mycomponent.xml)
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="component" method="upgrade">
+    <name>COM_MYCOMPONENT</name>
+    <version>1.0.0</version>
+    <description>COM_MYCOMPONENT_DESCRIPTION</description>
+    
+    <!-- KEY: Points to root src/ folder -->
+    <namespace path="src">Joomla\Component\Mycomponent</namespace>
+    
+    <!-- Site files -->
+    <files folder="site">
+        <folder>tmpl</folder>
+        <folder>language</folder>
+    </files>
+    
+    <!-- Admin files -->
+    <administration>
+        <files folder="admin">
+            <folder>forms</folder>
+            <folder>tmpl</folder>
+            <folder>sql</folder>
+            <folder>services</folder>
+            <folder>language</folder>
+        </files>
+        <menu>COM_MYCOMPONENT</menu>
+    </administration>
+    
+    <!-- Source code -->
+    <files>
+        <folder>src</folder>
+    </files>
+    
+    <!-- Assets -->
+    <media folder="media" destination="com_mycomponent">
+        <folder>css</folder>
+        <folder>js</folder>
+    </media>
+</extension>
+```
+
+## Simple Build Script
+
+Create `build.sh` to generate installable ZIP:
+
+```bash
+#!/bin/bash
+# build.sh - Simple build script
+
+COMPONENT_NAME="com_mycomponent"
+VERSION="1.0.0"
+
+# Clean and create directories
+rm -rf build dist
+mkdir -p build dist
+
+# Copy ALL files (including src/ folder!)
+cp -r admin build/
+cp -r site build/
+cp -r src build/          # ✅ Important: Copy src folder
+cp -r media build/
+cp -r language build/
+cp *.xml build/
+
+# Create ZIP package
+cd build
+zip -r ../dist/${COMPONENT_NAME}-${VERSION}.zip .
+cd ..
+rm -rf build
+
+echo "✅ Package created: dist/${COMPONENT_NAME}-${VERSION}.zip"
+echo "🚀 Ready for Joomla installation!"
+```
+
+## Usage
+
+```bash
+chmod +x build.sh    # Make executable
+./build.sh           # Build package
+```
+
+Upload `dist/com_mycomponent-1.0.0.zip` via **Extensions > Manage > Install**
+
+## Key Benefits
+
+- ✅ **Focused development** - Work on extension without full Joomla setup
+- ✅ **Better version control** - Clean, isolated repositories  
+- ✅ **Easy distribution** - Generate installable ZIP packages
+- ✅ **Team collaboration** - Multiple developers, separate projects
+
+## Essential Rules
+
+1. **Structure**: `src/` at component root, interface files in `admin/`/`site/`
+2. **Namespace**: `<namespace path="src">Joomla\Component\Yourcomponent</namespace>`
+3. **Security**: Always escape output, validate input, use CSRF tokens
+4. **Packaging**: Include `src/` folder in build script
+5. **Testing**: Test installation in clean Joomla environment
+description:
+globs:
+alwaysApply: false
+---
